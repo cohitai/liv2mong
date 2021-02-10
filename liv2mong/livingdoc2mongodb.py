@@ -78,6 +78,7 @@ class MongoLivingdocs:
 
         # sanity checks:
         self._remove_duplicates_articles()
+        return start_log_id
 
     def create_kafka_logs(self, start_id=0):
 
@@ -299,11 +300,159 @@ class MongoLivingdocs:
             for item in my_cursor:
                 self.articles.delete_one({"_id": item["_id"]})
 
-    def automation(self, hiatus=1200):
 
-        """this is how we automate the procedure """
+class Mongo_2:
+    cluster0_client = pymongo.MongoClient(
+        "mongodb+srv://cohitai:malzeit1984@cluster0.ufrty.mongodb.net/Livingdocs?retryWrites=true&w=majority")
+    blzlivingdocs_client = pymongo.MongoClient(
+        "mongodb+srv://cohitai:malzeit1984@articles.slsgc.mongodb.net/Livingdocs?retryWrites=true&w=majority")
 
-        while True:
-            self.update_articles()
-            logging.info("going to sleep...\n hiatus: {0}".format(hiatus))
-            time.sleep(hiatus)
+    def __init__(self):
+
+        self.db = self.cluster0_client.Livingdocs
+        self.articles = self.db.articles
+        self.kafka_logs = self.db.kafka_logs
+        self.articles_sqlike = self.db.articles_sqlike
+
+        self.db_n = self.blzlivingdocs_client.Livingdocs
+        self.articles_n = self.db_n.website_article
+
+    def blzlivingdocs_find_last(self):
+
+        return next(self.articles_n.find().sort([("_id", -1)]).limit(1))["id"]
+
+    def update_articles(self, start_log_id=None):
+
+        logging.info("Beginning update.... ")
+
+        for item in list(self.kafka_logs.find({"id": {"$gt": start_log_id}}).sort([("id", 1)])):
+
+            logging.info("kafka_logs: loading eventid: {0}".format(item["id"]))
+
+            if item['eventType'] == "unpublish":
+                logging.info("deleting article, docId: {0}".format(item["documentId"]))
+                self.articles_n.delete_one(({"id": item['documentId']}))
+
+            else:
+                try:
+                    if self.is_exists(item["documentId"]):
+                        logging.info("replacing article, docId: {0}".format(item["documentId"]))
+                        self.articles_n.replace_one({"id": item["documentId"]}, self.transform_obj(item["documentId"]))
+                    else:
+                        logging.info("inserting article, docId: {0}".format(item["documentId"]))
+                        self.articles_n.insert_one(self.transform_obj(item["documentId"]))
+
+                except StopIteration:
+                    continue
+
+    def extract_item(self, id):
+
+        return next(self.articles.find(
+            {"systemdata.documentId": id, "systemdata.documentType": "article", "systemdata.contentType": "regular",
+             "metadata.category.path": {"$ne": "/en"}, "metadata.language.label": {"$nin": ["Russian", "English"]}}))
+
+    @staticmethod
+    def _prepre_doc(doc):
+        l = []
+        for x in doc:
+            try:
+                if x['component'] not in ['iframe', 'tweet', 'infobox', 'free-html', 'kurier-article-teaser-list',
+                                          'category-teasers', 'sidebar-title', 'embed-teaser', 'image',
+                                          'sidebar-teaser']:
+                    if x['component'] == 'head':
+                        l.append(('title', x['content']['title']))
+                        l.append(('author', x['content']['author']))
+                    elif x['component'] == 'p':
+                        if not x['content']['text']:
+                            continue
+                        else:
+                            l.append(('p', x['content']['text']))
+                    elif x['component'] == 'lead-p':
+                        try:
+                            l.append(('opener', x['content']['opener']))
+                            l.append(('lead_p', x['content']['text']))
+                        except KeyError:
+                            l.append((x['component'], x['content']))
+                    elif x['component'] == 'subtitle':
+                        try:
+                            l.append(('subtitle', x['content']['title']))
+                        except KeyError:
+                            l.append((x['component'], x['content']))
+                    elif x['component'] == 'quote':
+                        try:
+                            l.append(('qoute', x['content']['text']))
+                        except KeyError:
+                            l.append((x['component'], x['content']))
+
+                    else:
+                        l.append((x['component'], x['content']))
+            except KeyError:
+                continue
+
+        return l
+
+    def transform_obj(self, docid):
+
+        """converts a NoSQL item into SQL item. """
+        item = self.extract_item(docid)
+        try:
+            return {"id": item["systemdata"]["documentId"], "url": item["metadata"]["routing"]["path"],
+                    "title": item["metadata"]["title"],
+                    "author": self.find_author(str(item["livingdoc"]["content"])),
+                    "publishdate": item["metadata"]["publishDate"],
+                    "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
+                    "language": item["metadata"]["language"]["label"]
+                , "image_url": item["metadata"]["teaserImage"]["url"]}
+
+        except KeyError:
+            return {"id": item["systemdata"]["documentId"], "url": item["metadata"]["routing"]["path"],
+                    "title": item["metadata"]["title"],
+                    "author": self.find_author(str(item["livingdoc"]["content"])),
+                    "publishdate": item["metadata"]["publishDate"],
+                    "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
+                    "language": item["metadata"]["language"]["label"]}
+
+    @staticmethod
+    def find_author(string):
+
+        """find author name within a json string."""
+
+        try:
+            rex1 = re.search('author\': \'', string)
+            e1 = rex1.end()
+            e2 = string[e1:].find('\'}')
+            return string[e1:e1 + e2]
+        except AttributeError:
+            return ''
+
+    def is_exists(self, id):
+
+        """tests whether a document already exists in the database. """
+
+        return not list(self.articles_n.find({"id": {"$exists": True, "$in": [id]}}, {'_id': 0, "id": 1})) == []
+
+    def _remove_duplicates_article_n(self):
+
+        """removes duplicates from articles_sqlike (sanity check) """
+
+        duplicates = self.articles_n.aggregate([
+            {"$group": {"_id": "$id", "count": {"$sum": 1}}},
+            {"$match": {"_id": {"$ne": None}, "count": {"$gt": 1}}},
+            {"$project": {"id": "$_id", "_id": 0}}])
+
+        # extract their documentId's
+        dup_l = []
+        for item in duplicates:
+            dup_l.append(item["id"])
+
+        # remove from database
+        logging.info("removing {0} duplicates".format(len(dup_l)))
+
+        while dup_l:
+            i = dup_l.pop()
+            myCursor = self.articles_n.find({"id": i}).sort([("_id", -1)])
+
+            # omits the most recent update.
+            next(myCursor)
+            for item in myCursor:
+                self.articles_n.delete_one({"_id": item["_id"]})
