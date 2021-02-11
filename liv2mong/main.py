@@ -1,9 +1,9 @@
 import livingdoc2mongodb as Liv2Mong
 import argparse
 import logging
-import sys,time
+import sys
+import time
 logging.basicConfig(stream=sys.stdout, filemode='a', level=logging.INFO)
-
 
 def main():
     parser = argparse.ArgumentParser(description="MongoDB backend")
@@ -28,9 +28,6 @@ def main():
             Mong.update_articles(starting_ind)
             logging.info("going to sleep...\n hiatus: {0}".format(hiatus))
             time.sleep(hiatus)
-
-
-
 
     if args.update:
 

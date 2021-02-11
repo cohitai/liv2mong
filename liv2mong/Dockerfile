@@ -5,7 +5,7 @@ WORKDIR /liv2mong
 
 # Copy the current directory contents into the container at /liv2mong
 #ADD . /liv2mong
-ADD ./liv2mong /liv2mong 
+ADD . /liv2mong
 
 # Pymongo installation:
 RUN apt-get update

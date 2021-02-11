@@ -304,8 +304,11 @@ class MongoLivingdocs:
 class Mongo_2:
     cluster0_client = pymongo.MongoClient(
         "mongodb+srv://cohitai:malzeit1984@cluster0.ufrty.mongodb.net/Livingdocs?retryWrites=true&w=majority")
+    #blzlivingdocs_client = pymongo.MongoClient(
+    #    "mongodb+srv://cohitai:malzeit1984@articles.slsgc.mongodb.net/Livingdocs?retryWrites=true&w=majority")
+
     blzlivingdocs_client = pymongo.MongoClient(
-        "mongodb+srv://cohitai:malzeit1984@articles.slsgc.mongodb.net/Livingdocs?retryWrites=true&w=majority")
+        "mongodb+srv://cohitai:malzeit1984@blz-livingdocs.ufrty.mongodb.net/Livingdocs?retryWrites=true&w=majority")
 
     def __init__(self):
 
@@ -315,7 +318,8 @@ class Mongo_2:
         self.articles_sqlike = self.db.articles_sqlike
 
         self.db_n = self.blzlivingdocs_client.Livingdocs
-        self.articles_n = self.db_n.website_article
+        #self.articles_n = self.db_n.website_article
+        self.articles_n = self.db_n.website_berlinerzeitung
 
     def blzlivingdocs_find_last(self):
 
