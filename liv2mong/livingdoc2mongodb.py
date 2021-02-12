@@ -405,16 +405,32 @@ class Mongo_2:
                     "author": self.find_author(str(item["livingdoc"]["content"])),
                     "publishdate": item["metadata"]["publishDate"],
                     "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
-                    "language": item["metadata"]["language"]["label"]
-                , "image_url": item["metadata"]["teaserImage"]["url"]}
+                    "language": item["metadata"]["language"]["label"],
+                    "image_url": item["metadata"]["teaserImage"]["url"]}
 
         except KeyError:
-            return {"id": item["systemdata"]["documentId"], "url": item["metadata"]["routing"]["path"],
-                    "title": item["metadata"]["title"],
-                    "author": self.find_author(str(item["livingdoc"]["content"])),
-                    "publishdate": item["metadata"]["publishDate"],
-                    "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
-                    "language": item["metadata"]["language"]["label"]}
+
+            try:
+
+                return {"id": item["systemdata"]["documentId"], "url": item["metadata"]["routing"]["path"],
+                        "title": item["metadata"]["title"],
+
+                        "author": self.find_author(str(item["livingdoc"]["content"])),
+                        "publishdate": item["metadata"]["publishDate"],
+
+                        "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
+                        "language": item["metadata"]["language"]["label"]}
+
+            except KeyError:
+
+                return {"id": item["systemdata"]["documentId"], "url": item["metadata"]["routing"]["path"],
+                        "title": item["metadata"]["title"],
+
+                        "author": self.find_author(str(item["livingdoc"]["content"])),
+                        "publishdate": item["metadata"]["publishDate"],
+
+                        "text": self._prepre_doc(self.extract_item(docid)["livingdoc"]["content"]),
+                        "language": "German"}
 
     @staticmethod
     def find_author(string):

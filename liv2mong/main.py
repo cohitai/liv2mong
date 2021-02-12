@@ -8,7 +8,9 @@ logging.basicConfig(stream=sys.stdout, filemode='a', level=logging.INFO)
 def main():
     parser = argparse.ArgumentParser(description="MongoDB backend")
     parser.add_argument("-A", "--automate", help="automate server by time", nargs='+', type=int)
-    parser.add_argument("-C", "--update", help="custum update", nargs='+', type=int)
+    parser.add_argument("-C", "--update", help="custom update", nargs='+', type=int)
+    parser.add_argument("-X", "--update1", help="custom update", nargs='+', type=int)
+    parser.add_argument("-Y", "--update2", help="custom update", nargs='+', type=int)
     args = parser.parse_args()
 
     M2L = Liv2Mong.MongoLivingdocs()
@@ -34,6 +36,15 @@ def main():
         logging.info("starting updating.... ")
         M2L.update_articles(args.update[0])
         Mong.update_articles(args.update[0])
+
+    if args.update1:
+        logging.info("starting updating.... ")
+        M2L.update_articles(args.update[0])
+
+    if args.update2:
+        logging.info("starting updating.... ")
+        Mong.update_articles(args.update[0])
+
 
 if __name__ == "__main__":
     main()
