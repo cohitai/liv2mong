@@ -39,11 +39,11 @@ def main():
 
     if args.update1:
         logging.info("starting updating.... ")
-        M2L.update_articles(args.update[0])
+        M2L.update_articles(args.update1[0])
 
     if args.update2:
         logging.info("starting updating.... ")
-        Mong.update_articles(args.update[0])
+        Mong.update_articles(args.update2[0])
 
 
 if __name__ == "__main__":
