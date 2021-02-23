@@ -5,6 +5,7 @@ import sys
 import time
 logging.basicConfig(stream=sys.stdout, filemode='a', level=logging.INFO)
 
+
 def main():
     parser = argparse.ArgumentParser(description="MongoDB backend")
     parser.add_argument("-A", "--automate", help="automate server by time", nargs='+', type=int)

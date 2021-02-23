@@ -21,4 +21,7 @@ RUN pip install -r requirements.txt
 
 # run the command to start automation
 #CMD python main.py -C 133142
+
 CMD python main.py -A 1200
+
+#CMD python main.py -Y 100563
